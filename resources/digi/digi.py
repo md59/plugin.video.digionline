@@ -14,10 +14,11 @@ class Digi():
 
   protocol = 'https'
   siteUrl = protocol + '://www.digionline.ro'
-  siteUrlProTv = '://protvplus.ro/'
-  siteUrlStirileProTv = '://stirileprotv.ro/protvnews/'
+  siteUrlProTv = protocol + '://protvplus.ro/'
+  siteUrlStirileProTv = protocol + '://stirileprotv.ro'
 
   number_pattern = re.compile("[0-9]+")
+  stirile_protv_stream_pattern = re.compile("\"" + protocol + "://" + ".*m3u8.*\"")
   protv_channel_category_general = "general"
   protv_channel_category_tematice = "tematice"
   protv_channel_category_filme = "filme"
@@ -204,19 +205,19 @@ class Digi():
 
   def scrape_protv_channels(self):
     channels = []
-    html = urllib2.urlopen(self.protocol + self.siteUrlStirileProTv, timeout=1).read()
+    html = urllib2.urlopen(self.siteUrlStirileProTv, timeout=1).read()
     soup = BeautifulSoup(html, "html.parser")
     channel_name = self.protv_channel_default_names[self.channel_name_stirileprotv_stripped]
     channel_logo = self.protv_channel_default_logo[self.channel_name_stirileprotv_stripped]
     try:
-      show_title = str(soup.find(class_="live-headline weight500 white").text).replace("ACUM:", "").replace("la ProTv", "").strip()
+      show_title = soup.find(class_=None, href="https://stirileprotv.ro/protvnews/").text
       if show_title is None:
         show_title = channel_name
     except:
       show_title = channel_name
     channel_category = self.protv_channel_category_stiri
     try:
-      channel_url = [str(re.compile("\"" + self.protocol + "://" + ".*m3u8.*\"").findall(str(e))[0]).replace("\"", "") for e in soup.find_all("script", type="text/javascript") if "m3u8" in str(e)][0]
+      channel_url = [str(stirile_protv_stream_pattern.findall(str(e))[0]).replace("\"", "") for e in soup.find_all("script", type="text/javascript") if "m3u8" in str(e)][0]
       if channel_url is None:
         channel_url = self.protv_channel_url[self.channel_name_stirileprotv_stripped]
     except:
@@ -229,7 +230,7 @@ class Digi():
                      })
 
     try:
-      html = urllib2.urlopen(self.protocol + self.siteUrlProTv, timeout=1).read()
+      html = urllib2.urlopen(self.siteUrlProTv, timeout=1).read()
       soup = BeautifulSoup(html, "html.parser")
     except:
       return channels
@@ -241,9 +242,10 @@ class Digi():
       channel_name = str(e.find(class_="e-logo").find("img")["alt"]).title().replace("Tv", "TV")
       if channel_name is None:
         channel_name = "Pro TV"
-      channel_logo = str(e.find(class_="e-logo").find("img")["src"])
-      if channel_logo is None:
-        channel_logo = self.get_protv_channel_default_logo(channel_name)
+      #channel_logo = str(e.find(class_="e-logo").find("img")["src"])
+      #if channel_logo is None:
+      #  channel_logo = self.get_protv_channel_default_logo(channel_name)
+      channel_logo = self.get_protv_channel_default_logo(channel_name)
       channel_category = self.get_protv_channel_category(channel_name)
       channel_url = self.get_protv_channel_url(channel_name)
 
@@ -254,6 +256,7 @@ class Digi():
                        'category': channel_category
                       })
     return channels
+
   def scrapChannels(self, url):
     html = self.getPage(url)
     # print(html)
