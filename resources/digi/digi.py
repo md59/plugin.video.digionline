@@ -14,11 +14,57 @@ class Digi():
 
   protocol = 'https'
   siteUrl = protocol + '://www.digionline.ro'
+  siteUrlProTv = '://protvplus.ro/'
+  siteUrlStirileProTv = '://stirileprotv.ro/protvnews/'
+
+  number_pattern = re.compile("[0-9]+")
+  protv_channel_category_general = "general"
+  protv_channel_category_tematice = "tematice"
+  protv_channel_category_filme = "filme"
+  protv_channel_category_stiri = "stiri"
+  channel_name_protv_stripped = "protv"
+  channel_name_pro2_stripped = "pro2"
+  channel_name_prox_stripped = "prox"
+  channel_name_progold_stripped = "progold"
+  channel_name_procinema_stripped = "procinema"
+  channel_name_stirileprotv_stripped = "stirileprotv"
+  protv_channel_default_names = {
+    channel_name_protv_stripped: "Pro TV",
+    channel_name_pro2_stripped: "Pro 2",
+    channel_name_prox_stripped: "Pro X",
+    channel_name_progold_stripped: "Pro Gold",
+    channel_name_procinema_stripped: "Pro Cinema",
+    channel_name_stirileprotv_stripped: "Stirile ProTV"
+  }
+  protv_channel_categories = {
+    channel_name_protv_stripped: protv_channel_category_general,
+    channel_name_pro2_stripped: protv_channel_category_tematice,
+    channel_name_prox_stripped: protv_channel_category_tematice,
+    channel_name_progold_stripped: protv_channel_category_tematice,
+    channel_name_procinema_stripped: protv_channel_category_filme,
+    channel_name_stirileprotv_stripped: protv_channel_category_filme
+  }
+  protv_channel_url = {
+    channel_name_protv_stripped: "https://vid.hls.protv.ro/protvhdn/protvhd.m3u8?1",
+    channel_name_pro2_stripped: "https://vid.hls.protv.ro/pro2n/pro2_3_34/index.m3u8?1",
+    channel_name_prox_stripped: "https://vid.hls.protv.ro/proxhdn/proxhd.m3u8?1",
+    channel_name_progold_stripped: "https://vid.hls.protv.ro/progoldn/progold.m3u8?1",
+    channel_name_procinema_stripped: "https://vid.hls.protv.ro/procineman/procinema.m3u8?1",
+    channel_name_stirileprotv_stripped: "https://vid.hls.protv.ro/protvnews/protvnews_high/index.m3u8?1"
+  }
+  protv_channel_default_logo = {
+    channel_name_protv_stripped: "https://vignette.wikia.nocookie.net/tvfanon6528/images/e/e0/Pro_TV_(2017-.n.v.).pn",
+    channel_name_pro2_stripped: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d9/Logo_Pro_2_%282017%29.svg/1200px-Logo_Pro_2_%282017%29.svg.png",
+    channel_name_prox_stripped: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/99/Logo_Pro_X_%282017%29.svg/1200px-Logo_Pro_X_%282017%29.svg.png",
+    channel_name_progold_stripped: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d3/Logo_Pro_Gold_%282017%29.svg/1200px-Logo_Pro_Gold_%282017%29.svg.png",
+    channel_name_procinema_stripped: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Logo_Pro_Cinema_%282017%29.svg/1024px-Logo_Pro_Cinema_%282017%29.svg.png",
+    channel_name_stirileprotv_stripped: "https://vignette.wikia.nocookie.net/logopedia/images/4/45/Stirile_Pro_TV_logo_2017.png"
+  }
 
   headers = {
     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
     'Accept-Encoding': 'identity',
-    'Accept-Language': 'en-US,en;q=0.5', 
+    'Accept-Language': 'en-US,en;q=0.5',
     'Connection': 'keep-alive',
     'Host': 'www.digionline.ro',
     'Upgrade-Insecure-Requests': '1',
@@ -56,7 +102,7 @@ class Digi():
       request = urllib2.Request(self.siteUrl + '/auth/login', logindata, self.headers)
       response = self.opener.open(request)
       self.cookieJar.save(filename=self.cookieFile, ignore_discard=True, ignore_expires=True)
-      
+
       logindata = urllib.urlencode({
         'form-login-mode': 'mode-all'
       })
@@ -65,8 +111,8 @@ class Digi():
       self.cookieJar.save(filename=self.cookieFile, ignore_discard=True, ignore_expires=True)
       # print(response.read())
       # addon_log(response.read())
-    
-   
+
+
     landedUrl = response.geturl()
     # addon_log(landedUrl)
     if(landedUrl == self.siteUrl + '/auth/login'):
@@ -108,7 +154,7 @@ class Digi():
     # addon_log(html)
     # f= open("test.html","w+")
     # f.write(html)
-    # f.close() 
+    # f.close()
     soup = BeautifulSoup(html, "html.parser")
     catLinks = soup.find_all('a', class_="nav-menu-item-link", href=True)
     # addon_log(catLinks)
@@ -122,7 +168,92 @@ class Digi():
         # print(link['href'])
         # print(link['title'])
     return cats
-  
+
+  def get_protv_stripped_channel_name(self, channel_name):
+    return channel_name.lower().strip().replace(" ", "")
+
+  def get_protv_channel_category(self, channel_name):
+    channel_name_stripped = self.get_protv_stripped_channel_name(channel_name)
+    try:
+      category = self.protv_channel_categories[channel_name_stripped]
+      if category is None:
+        return self.protv_channel_category_general
+      return category
+    except:
+      return self.protv_channel_category_general
+
+  def get_protv_channel_url(self, channel_name):
+    channel_name_stripped = self.get_protv_stripped_channel_name(channel_name)
+    try:
+      url = self.protv_channel_url[channel_name_stripped]
+      if url is None:
+        return ""
+      return url
+    except:
+      return ""
+
+  def get_protv_channel_default_logo(self, channel_name):
+    channel_name_stripped = self.get_protv_stripped_channel_name(channel_name)
+    try:
+      logo = self.protv_channel_default_logo[channel_name_stripped]
+      if logo is None:
+        return ""
+      return logo
+    except:
+      return ""
+
+  def scrape_protv_channels(self):
+    channels = []
+    html = urllib2.urlopen(self.protocol + self.siteUrlStirileProTv, timeout=1).read()
+    soup = BeautifulSoup(html, "html.parser")
+    channel_name = self.protv_channel_default_names[self.channel_name_stirileprotv_stripped]
+    channel_logo = self.protv_channel_default_logo[self.channel_name_stirileprotv_stripped]
+    try:
+      show_title = str(soup.find(class_="live-headline weight500 white").text).replace("ACUM:", "").replace("la ProTv", "").strip()
+      if show_title is None:
+        show_title = channel_name
+    except:
+      show_title = channel_name
+    channel_category = self.protv_channel_category_stiri
+    try:
+      channel_url = [str(re.compile("\"" + self.protocol + "://" + ".*m3u8.*\"").findall(str(e))[0]).replace("\"", "") for e in soup.find_all("script", type="text/javascript") if "m3u8" in str(e)][0]
+      if channel_url is None:
+        channel_url = self.protv_channel_url[self.channel_name_stirileprotv_stripped]
+    except:
+      channel_url = self.protv_channel_url[self.channel_name_stirileprotv_stripped]
+    channels.append({'name': channel_name,
+                     'url': channel_url,
+                     'logo': channel_logo,
+                     'show_title': show_title,
+                     'category': channel_category
+                     })
+
+    try:
+      html = urllib2.urlopen(self.protocol + self.siteUrlProTv, timeout=1).read()
+      soup = BeautifulSoup(html, "html.parser")
+    except:
+      return channels
+
+    for e in soup.find_all("a", attrs={'data-channel-id': self.number_pattern}):
+      show_title = str(e.find(class_="b-program").find(class_="e-title", recursive=False).text).title().replace("Tv", "TV")
+      if show_title is None:
+        show_title = "Program"
+      channel_name = str(e.find(class_="e-logo").find("img")["alt"]).title().replace("Tv", "TV")
+      if channel_name is None:
+        channel_name = "Pro TV"
+      channel_logo = str(e.find(class_="e-logo").find("img")["src"])
+      if channel_logo is None:
+        channel_logo = self.get_protv_channel_default_logo(channel_name)
+      channel_category = self.get_protv_channel_category(channel_name)
+      channel_url = self.get_protv_channel_url(channel_name)
+
+      channels.append({'name': channel_name,
+                       'url': channel_url,
+                       'logo': channel_logo,
+                       'show_title': show_title,
+                       'category': channel_category
+                      })
+    return channels
   def scrapChannels(self, url):
     html = self.getPage(url)
     # print(html)
@@ -235,3 +366,6 @@ class Digi():
         err = soup.get_text()
     return {'url': url,
             'err': err}
+
+if __name__ == "__main__":
+  Digi().scrape_protv_channels()

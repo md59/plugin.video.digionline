@@ -11,7 +11,7 @@ cookieFile = os.path.join(xbmc.translatePath(addon.getAddonInfo('profile')), 'co
 
 def addDir(name, url, mode):
   u = sys.argv[0] + "?url=" + urllib.quote_plus(url) + '&mode=' + str(mode)
-  
+
   liz = xbmcgui.ListItem(name)
   liz.setInfo( type="Video", infoLabels={ "Title": name })
   ok = xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]), url=u, listitem=liz, isFolder=True)
@@ -43,17 +43,25 @@ def listCat():
   cats = digi.scrapCats(html)
 
   for cat in cats:
-    addDir(name =  cat['name'].encode('utf8'), url=cat['url'], mode=1)    
+    addDir(name =  cat['name'].encode('utf8'), url=cat['url'], mode=1)
 
 def listCh(url):
   addon_log(url)
   digi = Digi(cookieFile = cookieFile)
   channels = digi.scrapChannels(url)
+  protv_channels = digi.scrape_protv_channels()
+
   for ch in channels:
     addLink(name =  ch['name'].encode('utf8'),
             url =  ch['url'],
             logo = ch['logo'],
             mode = 2)
+
+  for ch in protv_channels:
+    if ch['category'] in str(sys.argv[2]).lower():
+      liz = xbmcgui.ListItem(ch["show_title"] + " la " + ch["name"], thumbnailImage=ch["logo"])
+      liz.setInfo(type="Video", infoLabels={"Title": ch["name"], "Plot": ""})
+      xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]), url=ch["url"], listitem=liz, isFolder=False)
 
 def play(url, name, logo):
   addon_log(url)
