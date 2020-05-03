@@ -1,5 +1,6 @@
 import xbmc, xbmcgui, xbmcplugin, xbmcaddon
 import os, urllib
+import multiprocessing.dummy as multiprocessing
 
 from common import *
 from resources.digi.digi import Digi
@@ -49,7 +50,22 @@ def listCh(url):
   addon_log(url)
   digi = Digi(cookieFile = cookieFile)
   channels = digi.scrapChannels(url)
-  protv_channels = digi.scrape_protv_channels()
+
+  stirileprotv_channels = []
+  protv_channels = []
+  protv_thread_wait_time = 3
+  protv_pool = multiprocessing.Pool(processes=2)
+  protv_thread_result = protv_pool.apply_async(digi.scrape_protv_channels, (url,))
+  stirile_protv_thread_result = protv_pool.apply_async(digi.scrape_stirileprotv_channels, (url,))
+  protv_pool.close()
+  try:
+    protv_channels.extend(protv_thread_result.get(protv_thread_wait_time))
+  except:
+    pass
+  try:
+    stirileprotv_channels.extend(stirile_protv_thread_result.get(protv_thread_wait_time))
+  except:
+    pass
 
   for ch in channels:
     addLink(name =  ch['name'].encode('utf8'),
@@ -57,8 +73,8 @@ def listCh(url):
             logo = ch['logo'],
             mode = 2)
 
-  for ch in protv_channels:
-    if ch['category'] in str(sys.argv[2]).lower():
+  for ch in stirileprotv_channels + protv_channels:
+    if ch['category'] in str(sys.argv[2]).lower() or ch['category'] in url.lower():
       liz = xbmcgui.ListItem(ch["show_title"] + " la " + ch["name"], thumbnailImage=ch["logo"])
       liz.setInfo(type="Video", infoLabels={"Title": ch["name"], "Plot": ""})
       xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]), url=ch["url"], listitem=liz, isFolder=False)

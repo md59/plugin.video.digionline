@@ -1,3 +1,4 @@
+import multiprocessing.dummy as multiprocessing
 import urllib, urllib2
 import cookielib
 import os
@@ -19,10 +20,10 @@ class Digi():
 
   number_pattern = re.compile("[0-9]+")
   stirile_protv_stream_pattern = re.compile("\"" + protocol + "://" + ".*m3u8.*\"")
-  protv_channel_category_general = "general"
-  protv_channel_category_tematice = "tematice"
-  protv_channel_category_filme = "filme"
-  protv_channel_category_stiri = "stiri"
+  channel_category_general = "general"
+  channel_category_tematice = "tematice"
+  channel_category_filme = "filme"
+  channel_category_stiri = "stiri"
   channel_name_protv_stripped = "protv"
   channel_name_pro2_stripped = "pro2"
   channel_name_prox_stripped = "prox"
@@ -38,12 +39,12 @@ class Digi():
     channel_name_stirileprotv_stripped: "Stirile ProTV"
   }
   protv_channel_categories = {
-    channel_name_protv_stripped: protv_channel_category_general,
-    channel_name_pro2_stripped: protv_channel_category_tematice,
-    channel_name_prox_stripped: protv_channel_category_tematice,
-    channel_name_progold_stripped: protv_channel_category_tematice,
-    channel_name_procinema_stripped: protv_channel_category_filme,
-    channel_name_stirileprotv_stripped: protv_channel_category_filme
+    channel_name_protv_stripped: channel_category_general,
+    channel_name_pro2_stripped: channel_category_tematice,
+    channel_name_prox_stripped: channel_category_tematice,
+    channel_name_progold_stripped: channel_category_tematice,
+    channel_name_procinema_stripped: channel_category_filme,
+    channel_name_stirileprotv_stripped: channel_category_filme
   }
   protv_channel_url = {
     channel_name_protv_stripped: "https://vid.hls.protv.ro/protvhdn/protvhd.m3u8?1",
@@ -178,10 +179,10 @@ class Digi():
     try:
       category = self.protv_channel_categories[channel_name_stripped]
       if category is None:
-        return self.protv_channel_category_general
+        return self.channel_category_general
       return category
     except:
-      return self.protv_channel_category_general
+      return self.channel_category_general
 
   def get_protv_channel_url(self, channel_name):
     channel_name_stripped = self.get_protv_stripped_channel_name(channel_name)
@@ -203,9 +204,13 @@ class Digi():
     except:
       return ""
 
-  def scrape_protv_channels(self):
+  def scrape_stirileprotv_channels(self, url):
+    passed_category = url.replace("/", "").lower().strip()
+    if passed_category != self.channel_category_stiri:
+      return []
+
     channels = []
-    html = urllib2.urlopen(self.siteUrlStirileProTv, timeout=1).read()
+    html = urllib2.urlopen(self.siteUrlStirileProTv).read()
     soup = BeautifulSoup(html, "html.parser")
     channel_name = self.protv_channel_default_names[self.channel_name_stirileprotv_stripped]
     channel_logo = self.protv_channel_default_logo[self.channel_name_stirileprotv_stripped]
@@ -215,7 +220,7 @@ class Digi():
         show_title = channel_name
     except:
       show_title = channel_name
-    channel_category = self.protv_channel_category_stiri
+    channel_category = self.channel_category_stiri
     try:
       channel_url = [str(stirile_protv_stream_pattern.findall(str(e))[0]).replace("\"", "") for e in soup.find_all("script", type="text/javascript") if "m3u8" in str(e)][0]
       if channel_url is None:
@@ -228,9 +233,16 @@ class Digi():
                      'show_title': show_title,
                      'category': channel_category
                      })
+    return channels
 
+  def scrape_protv_channels(self, url):
+    passed_category = url.replace("/", "").lower().strip()
+    if passed_category == self.channel_category_stiri:
+      return []
+
+    channels = []
     try:
-      html = urllib2.urlopen(self.siteUrlProTv, timeout=1).read()
+      html = urllib2.urlopen(self.siteUrlProTv).read()
       soup = BeautifulSoup(html, "html.parser")
     except:
       return channels
@@ -369,6 +381,3 @@ class Digi():
         err = soup.get_text()
     return {'url': url,
             'err': err}
-
-if __name__ == "__main__":
-  Digi().scrape_protv_channels()
